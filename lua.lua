@@ -13,7 +13,7 @@ local ULTRA_HIGH_WEBHOOK_URL = "https://discord.com/api/webhooks/142254748376210
 local SERVER_SWITCH_INTERVAL = 2 -- segundos
 
 -- ===== VARIÁVEL PARA EVITAR DUPLICATAS =====
-local sentBrainrots = {}
+local sentServers = {}
 
 -- ========= FORMATAÇÃO =========
 local function fmtShort(n)
@@ -57,29 +57,6 @@ local function getAllPlots()
     end
     
     return plots
-end
-
--- ===== FUNÇÃO PARA OBTER DONO DA PLOT =====
-local function getOwner(plot)
-    local success, result = pcall(function()
-        local ov = plot:FindFirstChild("Owner", true)
-        if ov and ov:IsA("ObjectValue") and ov.Value and ov.Value:IsA("Player") then return ov.Value end
-        
-        local uid = plot:GetAttribute("OwnerUserId")
-        if uid then return Players:GetPlayerByUserId(uid) end
-        
-        local iv = plot:FindFirstChild("OwnerUserId", true)
-        if iv and iv:IsA("IntValue") then return Players:GetPlayerByUserId(iv.Value) end
-        
-        local sv = plot:FindFirstChild("OwnerName", true)
-        if sv and sv:IsA("StringValue") then
-            for _,p in ipairs(Players:GetPlayers()) do 
-                if p.Name == sv.Value then return p end 
-            end
-        end
-        return nil
-    end)
-    return success and result or nil
 end
 
 -- ===== FUNÇÃO CORRIGIDA PARA CONVERTER APENAS VALORES VÁLIDOS =====
@@ -251,8 +228,6 @@ local function scanAllPlots()
                                         end
                                         
                                         local genValue, genText = getBrainrotGeneration(animalOverhead)
-                                        local owner = getOwner(plot)
-                                        local ownerName = owner and owner.Name or "Unknown"
                                         
                                         -- VALIDAÇÃO ADICIONAL: só aceitar se for um valor realista
                                         if brainrotName ~= "Unknown" and brainrotName ~= "" and genValue > 0 then
@@ -262,10 +237,7 @@ local function scanAllPlots()
                                                     name = brainrotName,
                                                     generation = genText,
                                                     valuePerSecond = genText,
-                                                    numericGen = genValue,
-                                                    plotName = plot.Name,
-                                                    ownerName = ownerName,
-                                                    podiumNumber = i
+                                                    numericGen = genValue
                                                 }
                                                 
                                                 table.insert(allBrainrots, brainrotInfo)
@@ -290,14 +262,17 @@ local function scanAllPlots()
         end
     end
     
-    -- Ordenar por geração
+    -- Ordenar por geração (maior primeiro)
     table.sort(allBrainrots, function(a, b)
         return a.numericGen > b.numericGen
     end)
     
+    -- Pegar apenas o MAIOR brainrot
+    local highestBrainrot = allBrainrots[1] or nil
+    
     print("✅ Scan completo! Total válidos: " .. #allBrainrots)
     
-    return allBrainrots
+    return highestBrainrot
 end
 
 -- ====== HELPER: envio robusto da webhook ======
@@ -335,7 +310,9 @@ end
 
 -- ===== FUNÇÃO PARA DETERMINAR WEBHOOK BASEADO NO VALOR =====
 local function getWebhookForValue(value)
-    print("🎯 Classificando: " .. value .. " (" .. fmtShort(value) .. ")")
+    if not value then return nil, "LOW" end
+    
+    print("🎯 Classificando valor: " .. value .. " (" .. fmtShort(value) .. ")")
     
     if value >= 100000000 then -- 100M+
         print("💎 ULTRA_HIGH (100M+)")
@@ -352,16 +329,16 @@ local function getWebhookForValue(value)
     end
 end
 
--- ===== FUNÇÃO PARA VERIFICAR SE JÁ FOI ENVIADO =====
-local function wasAlreadySent(brainrot)
-    local key = brainrot.name .. "_" .. brainrot.ownerName .. "_" .. brainrot.numericGen
-    return sentBrainrots[key] == true
+-- ===== FUNÇÃO PARA VERIFICAR SE O SERVIDOR JÁ FOI ENVIADO =====
+local function wasServerAlreadySent()
+    local key = game.JobId
+    return sentServers[key] == true
 end
 
--- ===== FUNÇÃO PARA MARCAR COMO ENVIADO =====
-local function markAsSent(brainrot)
-    local key = brainrot.name .. "_" .. brainrot.ownerName .. "_" .. brainrot.numericGen
-    sentBrainrots[key] = true
+-- ===== FUNÇÃO PARA MARCAR SERVIDOR COMO ENVIADO =====
+local function markServerAsSent()
+    local key = game.JobId
+    sentServers[key] = true
 end
 
 -- ===== FUNÇÃO PARA OBTER DATA E HORA ATUAL =====
@@ -372,49 +349,62 @@ local function getCurrentDateTime()
         dateTable.hour, dateTable.min, dateTable.sec)
 end
 
--- ===== ENVIO SIMPLIFICADO DE BRAINROTS =====
-local function sendBrainrotToCorrectWebhook(brainrot)
-    if wasAlreadySent(brainrot) then
-        print("📭 Já enviado: " .. brainrot.name .. " - " .. brainrot.valuePerSecond)
+-- ===== ENVIO DE UM ÚNICO EMBED POR SERVIDOR =====
+local function sendHighestBrainrotWebhook(highestBrainrot)
+    if wasServerAlreadySent() then
+        print("📭 Servidor já enviado: " .. game.JobId)
         return
     end
     
-    local webhookUrl, category = getWebhookForValue(brainrot.numericGen)
+    if not highestBrainrot then
+        print("📭 Nenhum brainrot qualificado encontrado")
+        return
+    end
+    
+    local webhookUrl, category = getWebhookForValue(highestBrainrot.numericGen)
     
     if not webhookUrl then
-        print("❌ Não qualificado: " .. brainrot.name .. " - " .. brainrot.valuePerSecond)
+        print("❌ Brainrot não qualificado: " .. highestBrainrot.name .. " - " .. highestBrainrot.valuePerSecond)
         return
     end
     
     -- Informações da categoria
     local categoryInfo = {
-        ULTRA_HIGH = {color = 10181046, emoji = "💎"},
-        SPECIAL = {color = 16766720, emoji = "🔥"}, 
-        NORMAL = {color = 5793266, emoji = "⭐"}
+        ULTRA_HIGH = {color = 10181046, emoji = "💎", name = "ULTRA HIGH"},
+        SPECIAL = {color = 16766720, emoji = "🔥", name = "ESPECIAL"}, 
+        NORMAL = {color = 5793266, emoji = "⭐", name = "NORMAL"}
     }
     
     local info = categoryInfo[category]
     local currentDateTime = getCurrentDateTime()
     
-    -- Embed com as informações solicitadas
+    -- Embed único com apenas o maior brainrot
     local embed = {
-        title = info.emoji .. " " .. brainrot.name,
+        title = "👑 " .. highestBrainrot.name,
+        description = "",
         color = info.color,
         fields = {
             {
-                name = "📊 Informações",
-                value = string.format("**Geração:** %s/s\n**Job ID:** ```%s```\n**Jogadores:** %d/%d\n**Enviado em:** %s",
-                    brainrot.valuePerSecond,
+                name = "📊 Geração",
+                value = "**" .. highestBrainrot.valuePerSecond .. "/s**",
+                inline = false
+            },
+            {
+                name = "🌐 Informações do Servidor",
+                value = string.format("**Job ID:** ```%s```\n**Jogadores:** %d/%d\n**Enviado em:** %s",
                     game.JobId, 
                     #Players:GetPlayers(), Players.MaxPlayers,
                     currentDateTime),
                 inline = false
             }
         },
-        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+        footer = {
+            text = "Scanner Automático • " .. info.name
+        }
     }
 
-    -- Payload
+    -- Payload com apenas um embed
     local payload = {
         embeds = {embed}
     }
@@ -422,34 +412,18 @@ local function sendBrainrotToCorrectWebhook(brainrot)
     local success, json = pcall(HttpService.JSONEncode, HttpService, payload)
     
     if success then
-        print("📤 Enviando: " .. brainrot.name .. " - " .. brainrot.valuePerSecond)
+        print("📤 Enviando maior brainrot para " .. category .. " webhook")
+        print("👑 " .. highestBrainrot.name .. " - " .. highestBrainrot.valuePerSecond)
         local sendSuccess = _tryWebhookSend(json, webhookUrl)
         if sendSuccess then
-            markAsSent(brainrot)
-            print("✅ Enviado com sucesso!")
+            markServerAsSent()
+            print("✅ Embed do servidor enviado com sucesso!")
         else
-            print("❌ Falha no envio")
+            print("❌ Falha no envio do embed")
         end
     else
-        print("❌ Erro no JSON")
+        print("❌ Erro ao criar JSON")
     end
-end
-
--- ===== ENVIAR TODOS OS BRAINROTS QUALIFICADOS =====
-local function sendAllQualifiedBrainrots(allBrainrots)
-    local sentCount = 0
-    local qualifiedCount = 0
-    
-    for _, brainrot in ipairs(allBrainrots) do
-        if brainrot.numericGen >= 1000000 then -- 1M+
-            qualifiedCount = qualifiedCount + 1
-            sendBrainrotToCorrectWebhook(brainrot)
-            sentCount = sentCount + 1
-            wait(0.5)
-        end
-    end
-    
-    print("🎯 Enviados: " .. sentCount .. "/" .. qualifiedCount)
 end
 
 -- ===== SISTEMA MELHORADO DE TROCA DE SERVIDOR =====
@@ -481,19 +455,6 @@ local function switchServer()
         print("❌ Falha no TeleportService: " .. tostring(errorMsg2))
     end
     
-    -- Método 3: Teleport para um servidor específico
-    local success3, errorMsg3 = pcall(function()
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId)
-    end)
-    
-    if success3 then
-        print("✅ Teleport para instância executado")
-        return true
-    else
-        print("❌ Falha no teleport para instância: " .. tostring(errorMsg3))
-    end
-    
-    -- Método 4: Tentar reiniciar o script se nada funcionar
     print("⚠️ Todos os métodos falharam, aguardando e tentando novamente...")
     wait(5)
     return false
@@ -511,11 +472,11 @@ local function main()
         
         wait(3)
         
-        local success, allBrainrots = pcall(scanAllPlots)
+        local success, highestBrainrot = pcall(scanAllPlots)
         
         if success then
-            sendAllQualifiedBrainrots(allBrainrots)
-            consecutiveFailures = 0 -- Resetar falhas consecutivas se o scan foi bem-sucedido
+            sendHighestBrainrotWebhook(highestBrainrot)
+            consecutiveFailures = 0
         else
             print("❌ Erro no scan")
             consecutiveFailures = consecutiveFailures + 1
