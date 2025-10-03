@@ -1,13 +1,13 @@
-wait(0.4)
+wait(0.1)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 
 -- ===== WEBHOOKS =====
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1418388829160607778/tLZjaLoSwiEJ5RpiJyIVxlSYtUfOXCXuw4ips0hNBuNRsK-Ukrch4NXxubi-o8K3-hoR"
-local SPECIAL_WEBHOOK_URL = "https://discord.com/api/webhooks/1418386817820004403/-E0obGTbnxTFAfNTY_M06Ds05e1QEbQWtn3ROym1DETpE_Seo4sKnv--su-6oneCGaEu"
-local ULTRA_HIGH_WEBHOOK_URL = "https://discord.com/api/webhooks/1422547483762102362/ivlTOC9GhUbPNh5d_Ors6LgQB7selinPIam8pmDOtXvjmpiVc9n4Zb3aH7_FFnjDowwd"
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1423669475340845086/kilrOY_Kctz8sFU7FFxEdB9a0GNeTEheKzCVwktjx0U6nta2WS0H9m1Rv4FWTwIKpIOg"
+local SPECIAL_WEBHOOK_URL = "https://discord.com/api/webhooks/1423669564440318012/OfFIpa6UrRdtw0WJIsdyKT4tqR7cd4KaFs4Tx6w7HF7wwO1lAjdoLL1bO-jIon4CitXP"
+local ULTRA_HIGH_WEBHOOK_URL = "https://discord.com/api/webhooks/1423669631759155253/uYI9OCTSc3GNcNdL6q5iDj758cV2uL9jmHVgFyfibtI3Yw4JMEaSpVIBc3LaFafuJG-6"
 
 -- ===== CONFIGURAÇÃO =====
 local SERVER_SWITCH_INTERVAL = 2 -- segundos
@@ -391,10 +391,9 @@ local function sendHighestBrainrotWebhook(highestBrainrot)
             },
             {
                 name = "🌐 Informações do Servidor",
-                value = string.format("**Job ID:** ```%s```\n**Jogadores:** %d/%d\n**Enviado em:** %s",
+                value = string.format("**Job ID:** ```%s```\n**Jogadores:** %d/%d",
                     game.JobId, 
-                    #Players:GetPlayers(), Players.MaxPlayers,
-                    currentDateTime),
+                    #Players:GetPlayers(), Players.MaxPlayers),
                 inline = false
             }
         },
