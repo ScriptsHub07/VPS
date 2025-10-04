@@ -1,104 +1,52 @@
-local AllIDs = {}
-local foundAnything = ""
-local actualHour = os.date("!*t").hour
-local Deleted = false
-local S_T = game:GetService("TeleportService")
-local S_H = game:GetService("HttpService")
-
-local File = pcall(function()
-    AllIDs = S_H:JSONDecode(readfile("server-hop-temp.json"))
-end)
-if not File then
-    table.insert(AllIDs, actualHour)
-    pcall(function()
-        writefile("server-hop-temp.json", S_H:JSONEncode(AllIDs))
-    end)
-end
-
--- Função segura para HTTP GET, lidando com erro 429 (Too Many Requests)
-local function safeHttpGet(url, maxRetries)
-    maxRetries = maxRetries or 5
-    local waitTime = 5
-    for i = 1, maxRetries do
-        local success, result = pcall(function()
-            return game:HttpGet(url)
-        end)
-        if success then
-            return result
-        elseif tostring(result):find("429") then
-            warn("Recebeu erro 429. Tentando novamente em " .. waitTime .. " segundos.")
-            wait(waitTime)
-        else
-            warn("Erro ao tentar fazer HttpGet: " .. tostring(result))
-            break
-        end
-    end
-    return nil
-end
-
-local function TPReturner(placeId)
-    local Site
-    local url
-    if foundAnything == "" then
-        url = 'https://games.roblox.com/v1/games/' .. placeId .. '/servers/Public?sortOrder=Asc&limit=100'
-    else
-        url = 'https://games.roblox.com/v1/games/' .. placeId .. '/servers/Public?sortOrder=Asc&limit=100&cursor=' .. foundAnything
-    end
-    local rawSite = safeHttpGet(url)
-    if not rawSite then
-        warn("Falha ao buscar servidores. Abortando tentativa.")
-        return
-    end
-    Site = S_H:JSONDecode(rawSite)
-
-    local ID = ""
-    if Site.nextPageCursor and Site.nextPageCursor ~= "null" and Site.nextPageCursor ~= nil then
-        foundAnything = Site.nextPageCursor
-    end
-    local num = 0
-    for i, v in pairs(Site.data) do
-        local Possible = true
-        ID = tostring(v.id)
-        if tonumber(v.maxPlayers) > tonumber(v.playing) then
-            for _, Existing in pairs(AllIDs) do
-                if num ~= 0 then
-                    if ID == tostring(Existing) then
-                        Possible = false
-                    end
-                else
-                    if tonumber(actualHour) ~= tonumber(Existing) then
-                        local delFile = pcall(function()
-                            delfile("server-hop-temp.json")
-                            AllIDs = {}
-                            table.insert(AllIDs, actualHour)
-                        end)
-                    end
-                end
-                num = num + 1
-            end
-            if Possible == true then
-                table.insert(AllIDs, ID)
-                wait()
-                pcall(function()
-                    writefile("server-hop-temp.json", S_H:JSONEncode(AllIDs))
-                    wait()
-                    S_T:TeleportToPlaceInstance(placeId, ID, game.Players.LocalPlayer)
-                end)
-                wait(4)
-            end
-        end
-    end
-end
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 
 local module = {}
-function module:Teleport(placeId)
-    while wait(5) do -- Aumentado para 7 segundos para evitar rate limit
-        pcall(function()
-            TPReturner(placeId)
-            if foundAnything ~= "" then
-                TPReturner(placeId)
+local cache = {}
+local lastFetch = 0
+local CACHE_TIMEOUT = 60 -- segundos
+local PLACE_ID = game.PlaceId
+
+-- Busca servidores e preenche o cache
+local function fetchServers()
+    local servers = {}
+    local url = "https://games.roblox.com/v1/games/"..PLACE_ID.."/servers/Public?sortOrder=Asc&limit=100"
+    local ok, data = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+    if ok and data and data.data then
+        for _,v in pairs(data.data) do
+            if tonumber(v.maxPlayers) > tonumber(v.playing) then
+                table.insert(servers, v.id)
             end
-        end)
+        end
+    end
+    return servers
+end
+
+function module:Teleport(placeId)
+    while true do
+        -- Recarrega cache se necessário
+        if #cache == 0 or (tick() - lastFetch > CACHE_TIMEOUT) then
+            cache = fetchServers()
+            lastFetch = tick()
+            if #cache == 0 then
+                warn("[hop] Nenhum servidor encontrado, aguardando para tentar novamente.")
+                wait(10)
+            end
+        end
+
+        -- Tenta teleportar para o próximo servidor do cache
+        local nextServer = table.remove(cache, 1)
+        if nextServer then
+            print("[hop] Teleportando para servidor: "..nextServer)
+            TeleportService:TeleportToPlaceInstance(placeId or PLACE_ID, nextServer, Players.LocalPlayer)
+            wait(2) -- Delay mínimo entre teleports (não entre requests)
+        else
+            wait(6) -- Espera antes de tentar recarregar cache
+        end
     end
 end
+
 return module
