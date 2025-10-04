@@ -10,7 +10,7 @@ local SPECIAL_WEBHOOK_URL = "https://discord.com/api/webhooks/142366956444031801
 local ULTRA_HIGH_WEBHOOK_URL = "https://discord.com/api/webhooks/1423669631759155253/uYI9OCTSc3GNcNdL6q5iDj758cV2uL9jmHVgFyfibtI3Yw4JMEaSpVIBc3LaFafuJG-6"
 
 -- ===== CONFIGURAÇÃO =====
-local SERVER_SWITCH_INTERVAL = 2 -- segundos
+local SERVER_SWITCH_INTERVAL = 10 -- segundos
 
 -- ===== VARIÁVEL PARA EVITAR DUPLICATAS =====
 local sentServers = {}
@@ -515,3 +515,4 @@ end
 
 print("✅ Sistema iniciado!")
 coroutine.wrap(main)()
+
