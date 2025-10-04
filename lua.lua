@@ -1,4 +1,3 @@
-wait(0.1)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
@@ -515,4 +514,5 @@ end
 
 print("✅ Sistema iniciado!")
 coroutine.wrap(main)()
+
 
