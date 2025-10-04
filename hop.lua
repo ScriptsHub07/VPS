@@ -28,7 +28,6 @@ local function safeHttpGet(url, maxRetries)
         elseif tostring(result):find("429") then
             warn("Recebeu erro 429. Tentando novamente em " .. waitTime .. " segundos.")
             wait(waitTime)
-            waitTime = waitTime * 2 -- Exponencial backoff
         else
             warn("Erro ao tentar fazer HttpGet: " .. tostring(result))
             break
