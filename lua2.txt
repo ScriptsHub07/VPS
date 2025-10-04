@@ -433,6 +433,7 @@ local function switchServer()
     local success, errorMsg = pcall(function()
         local module = loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptsHub07/VPS/refs/heads/main/hop.lua"))()
         module:Teleport(game.PlaceId)
+        wait(3)
     end)
     
     if success then
@@ -514,4 +515,5 @@ local function main()
 end
 
 print("✅ Sistema iniciado!")
+
 coroutine.wrap(main)()
