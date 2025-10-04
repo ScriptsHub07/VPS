@@ -1,3 +1,4 @@
+wait(0.1)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
@@ -9,7 +10,7 @@ local SPECIAL_WEBHOOK_URL = "https://discord.com/api/webhooks/142366956444031801
 local ULTRA_HIGH_WEBHOOK_URL = "https://discord.com/api/webhooks/1423669631759155253/uYI9OCTSc3GNcNdL6q5iDj758cV2uL9jmHVgFyfibtI3Yw4JMEaSpVIBc3LaFafuJG-6"
 
 -- ===== CONFIGURAÇÃO =====
-local SERVER_SWITCH_INTERVAL = 10 -- segundos
+local SERVER_SWITCH_INTERVAL = 2 -- segundos
 
 -- ===== VARIÁVEL PARA EVITAR DUPLICATAS =====
 local sentServers = {}
@@ -430,7 +431,7 @@ local function switchServer()
     
     -- Método 1: Server Hop externo
     local success, errorMsg = pcall(function()
-        local module = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeoKholYt/roblox/main/lk_serverhop.lua"))()
+        local module = loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptsHub07/VPS/refs/heads/main/hop.lua"))()
         module:Teleport(game.PlaceId)
     end)
     
@@ -513,6 +514,5 @@ local function main()
 end
 
 print("✅ Sistema iniciado!")
+
 coroutine.wrap(main)()
-
-
