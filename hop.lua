@@ -93,7 +93,7 @@ end
 
 local module = {}
 function module:Teleport(placeId)
-    while wait(7) do -- Aumentado para 7 segundos para evitar rate limit
+    while wait(5) do -- Aumentado para 7 segundos para evitar rate limit
         pcall(function()
             TPReturner(placeId)
             if foundAnything ~= "" then
