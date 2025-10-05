@@ -378,15 +378,10 @@ local function sendBrainrot150MNotification(highestBrainrot)
     
     -- Embed especial para brainrot > 150M
     local embed = {
-        title = "🚨 **BRAINROT GIGANTE ENCONTRADO!** 🚨",
-        description = "Foi detectado um brainrot com mais de **150M** de geração!",
+        title = "👑 " .. highestBrainrot.name,
+        description = "🚨 **Brainrot com mais de 150M de geração detectado!** 🚨",
         color = 16711680, -- Vermelho
         fields = {
-            {
-                name = "👑 Brainrot",
-                value = "**" .. highestBrainrot.name .. "**",
-                inline = true
-            },
             {
                 name = "📊 Geração",
                 value = "**" .. highestBrainrot.valuePerSecond .. "/s**",
@@ -398,12 +393,7 @@ local function sendBrainrot150MNotification(highestBrainrot)
                 inline = true
             },
             {
-                name = "🌐 Servidor",
-                value = "**Job ID:** ```" .. game.JobId .. "```",
-                inline = false
-            },
-            {
-                name = "👥 Jogadores",
+                name = "👥 Jogadores no Servidor",
                 value = "**" .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers .. "**",
                 inline = true
             },
@@ -420,8 +410,7 @@ local function sendBrainrot150MNotification(highestBrainrot)
     }
 
     local payload = {
-        embeds = {embed},
-        content = "@everyone 🚨 **ALERTA: BRAINROT 150M+ DETECTADO!** 🚨" -- Mention everyone
+        embeds = {embed}
     }
     
     local success, json = pcall(HttpService.JSONEncode, HttpService, payload)
