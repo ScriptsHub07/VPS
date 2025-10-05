@@ -8,12 +8,14 @@ local TeleportService = game:GetService("TeleportService")
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1423669475340845086/kilrOY_Kctz8sFU7FFxEdB9a0GNeTEheKzCVwktjx0U6nta2WS0H9m1Rv4FWTwIKpIOg"
 local SPECIAL_WEBHOOK_URL = "https://discord.com/api/webhooks/1423669564440318012/OfFIpa6UrRdtw0WJIsdyKT4tqR7cd4KaFs4Tx6w7HF7wwO1lAjdoLL1bO-jIon4CitXP"
 local ULTRA_HIGH_WEBHOOK_URL = "https://discord.com/api/webhooks/1423669631759155253/uYI9OCTSc3GNcNdL6q5iDj758cV2uL9jmHVgFyfibtI3Yw4JMEaSpVIBc3LaFafuJG-6"
+local BRAINROT_150M_WEBHOOK_URL = "https://discord.com/api/webhooks/1424353172553732178/G6Djgcv5Q8xfN35Ecs6T1bJhbUPWGyHfU9Bmjq1hM9f8iM1HfSIZXtMepoAVLnQcm4dp"
 
 -- ===== CONFIGURAÇÃO =====
 local SERVER_SWITCH_INTERVAL = 2 -- segundos
 
 -- ===== VARIÁVEL PARA EVITAR DUPLICATAS =====
 local sentServers = {}
+local sentBrainrot150MServers = {} -- Nova tabela para controlar servidores com brainrot > 150M
 
 -- ========= FORMATAÇÃO =========
 local function fmtShort(n)
@@ -335,10 +337,22 @@ local function wasServerAlreadySent()
     return sentServers[key] == true
 end
 
+-- ===== FUNÇÃO PARA VERIFICAR SE O SERVIDOR JÁ FOI ENVIADO PARA BRAINROT 150M =====
+local function wasBrainrot150MAlreadySent()
+    local key = game.JobId
+    return sentBrainrot150MServers[key] == true
+end
+
 -- ===== FUNÇÃO PARA MARCAR SERVIDOR COMO ENVIADO =====
 local function markServerAsSent()
     local key = game.JobId
     sentServers[key] = true
+end
+
+-- ===== FUNÇÃO PARA MARCAR SERVIDOR COMO ENVIADO PARA BRAINROT 150M =====
+local function markBrainrot150MAsSent()
+    local key = game.JobId
+    sentBrainrot150MServers[key] = true
 end
 
 -- ===== FUNÇÃO PARA OBTER DATA E HORA ATUAL =====
@@ -347,6 +361,84 @@ local function getCurrentDateTime()
     return string.format("%02d/%02d/%04d %02d:%02d:%02d", 
         dateTable.day, dateTable.month, dateTable.year,
         dateTable.hour, dateTable.min, dateTable.sec)
+end
+
+-- ===== NOVA FUNÇÃO: ENVIAR NOTIFICAÇÃO ESPECIAL PARA BRAINROT > 150M =====
+local function sendBrainrot150MNotification(highestBrainrot)
+    if wasBrainrot150MAlreadySent() then
+        print("📭 Servidor já enviado para brainrot 150M: " .. game.JobId)
+        return
+    end
+    
+    if not highestBrainrot or highestBrainrot.numericGen < 150000000 then
+        return -- Só envia se for maior que 150M
+    end
+    
+    local currentDateTime = getCurrentDateTime()
+    
+    -- Embed especial para brainrot > 150M
+    local embed = {
+        title = "🚨 **BRAINROT GIGANTE ENCONTRADO!** 🚨",
+        description = "Foi detectado um brainrot com mais de **150M** de geração!",
+        color = 16711680, -- Vermelho
+        fields = {
+            {
+                name = "👑 Brainrot",
+                value = "**" .. highestBrainrot.name .. "**",
+                inline = true
+            },
+            {
+                name = "📊 Geração",
+                value = "**" .. highestBrainrot.valuePerSecond .. "/s**",
+                inline = true
+            },
+            {
+                name = "💰 Valor Numérico",
+                value = "**" .. fmtShort(highestBrainrot.numericGen) .. "**",
+                inline = true
+            },
+            {
+                name = "🌐 Servidor",
+                value = "**Job ID:** ```" .. game.JobId .. "```",
+                inline = false
+            },
+            {
+                name = "👥 Jogadores",
+                value = "**" .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers .. "**",
+                inline = true
+            },
+            {
+                name = "🕐 Detecção",
+                value = "**" .. currentDateTime .. "**",
+                inline = true
+            }
+        },
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+        footer = {
+            text = "ALERTA BRAINROT 150M+ • Scanner Automático"
+        }
+    }
+
+    local payload = {
+        embeds = {embed},
+        content = "@everyone 🚨 **ALERTA: BRAINROT 150M+ DETECTADO!** 🚨" -- Mention everyone
+    }
+    
+    local success, json = pcall(HttpService.JSONEncode, HttpService, payload)
+    
+    if success then
+        print("🚨 ENVIANDO ALERTA BRAINROT 150M+!")
+        print("👑 " .. highestBrainrot.name .. " - " .. highestBrainrot.valuePerSecond .. " (Valor: " .. highestBrainrot.numericGen .. ")")
+        local sendSuccess = _tryWebhookSend(json, BRAINROT_150M_WEBHOOK_URL)
+        if sendSuccess then
+            markBrainrot150MAsSent()
+            print("✅ Alerta brainrot 150M+ enviado com sucesso!")
+        else
+            print("❌ Falha no envio do alerta brainrot 150M+")
+        end
+    else
+        print("❌ Erro ao criar JSON para alerta brainrot 150M")
+    end
 end
 
 -- ===== ENVIO DE UM ÚNICO EMBED POR SERVIDOR =====
@@ -359,6 +451,11 @@ local function sendHighestBrainrotWebhook(highestBrainrot)
     if not highestBrainrot then
         print("📭 Nenhum brainrot qualificado encontrado")
         return
+    end
+    
+    -- VERIFICAR E ENVIAR NOTIFICAÇÃO PARA BRAINROT > 150M
+    if highestBrainrot.numericGen >= 150000000 then
+        sendBrainrot150MNotification(highestBrainrot)
     end
     
     local webhookUrl, category = getWebhookForValue(highestBrainrot.numericGen)
@@ -514,5 +611,6 @@ local function main()
 end
 
 print("✅ Sistema iniciado!")
+print("🚨 Sistema de alerta para brainrot > 150M ativado!")
 
 coroutine.wrap(main)()
