@@ -1,0 +1,21 @@
+{
+  "name": "roblox-hop-api",
+  "version": "1.0.0",
+  "description": "API para hop de servidores Roblox",
+  "main": "api.js",
+  "scripts": {
+    "start": "node api.js",
+    "dev": "nodemon api.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["roblox", "api", "hop"],
+  "author": "Seu Nome",
+  "license": "MIT"
+}
